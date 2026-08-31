@@ -1,0 +1,271 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Personal Trainer{% endblock %}
+
+{% block extra_css %}
+<style>
+.klien-row { cursor:pointer; transition:var(--transition); }
+.klien-row:hover { background: var(--bg-card-hover) !important; }
+.klien-detail-panel { display:none; }
+.klien-detail-panel.active { display:block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header animate-fade-in">
+    <div>
+        <h1 class="page-title">Dashboard Personal Trainer</h1>
+        <p class="page-subtitle">
+            {% if profil_pt %}{{ profil_pt.nama_lengkap }}{% else %}{{ user.username }}{% endif %}
+            — Monitoring progres klien secara real-time
+        </p>
+    </div>
+    <div class="badge badge-blue">{{ total_klien }} Klien Aktif</div>
+</div>
+
+<div class="page-body animate-fade-in">
+
+    <div class="stats-grid">
+        <div class="stat-card blue">
+            <span class="stat-label">Total Klien</span>
+            <span class="stat-value blue">{{ total_klien }}</span>
+            <span class="stat-sub">klien terdaftar</span>
+        </div>
+        {% if profil_pt %}
+        <div class="stat-card green">
+            <span class="stat-label">Spesialisasi</span>
+            <span class="stat-value green" style="font-size:16px;">{{ profil_pt.spesialisasi|default:"General Fitness" }}</span>
+            <span class="stat-sub">bidang keahlian</span>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if klien_list %}
+    <div class="card">
+        <div class="card-title">Daftar Klien Anda</div>
+        <p class="text-small text-muted" style="margin-bottom:16px;">Klik nama klien untuk melihat statistik dan grafik perkembangannya.</p>
+
+        <div class="table-wrapper" style="margin-bottom:20px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nama Klien</th>
+                        <th>Username</th>
+                        <th>Berat Badan</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for profil in klien_list %}
+                    <tr class="klien-row" onclick="loadKlienDetail({{ profil.user.pk }}, '{{ profil.nama_lengkap }}')">
+                        <td>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <div class="user-avatar" style="width:32px;height:32px;font-size:13px;flex-shrink:0;">
+                                    {{ profil.nama_lengkap|first|upper }}
+                                </div>
+                                <strong>{{ profil.nama_lengkap }}</strong>
+                            </div>
+                        </td>
+                        <td class="mono text-small">{{ profil.user.username }}</td>
+                        <td>{{ profil.berat_badan|default:"—" }} {% if profil.berat_badan %}kg{% endif %}</td>
+                        <td>
+                            {% if profil.user.is_active %}
+                            <span class="badge badge-green">● Aktif</span>
+                            {% else %}
+                            <span class="badge badge-gray">○ Nonaktif</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-ghost btn-sm"
+                                onclick="event.stopPropagation(); loadKlienDetail({{ profil.user.pk }}, '{{ profil.nama_lengkap }}')">
+                                Lihat Detail →
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Detail Panel (loaded dynamically) -->
+        <div id="klien-detail-container" class="klien-detail-panel" style="border-top:1px solid var(--border);padding-top:20px;">
+            <div id="klien-detail-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h3 id="klien-detail-name" class="card-title"></h3>
+                <button class="btn btn-ghost btn-sm" onclick="closeDetail()">✕ Tutup</button>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid" id="klien-stats-grid" style="margin-bottom:16px;"></div>
+
+            <!-- Chart -->
+            <div class="card" style="margin-bottom:16px;">
+                <div class="card-title">Perkembangan Latihan (14 Sesi Terakhir)</div>
+                <div class="chart-container">
+                    <canvas id="klien-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Riwayat -->
+            <div class="card">
+                <div class="card-title">Riwayat Sesi</div>
+                <div class="table-wrapper" id="klien-riwayat-table"></div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-icon">—</div>
+            <p>Belum ada klien yang di-assign ke Anda.</p>
+            <p class="text-small" style="margin-top:8px;">Hubungi administrator untuk menambahkan klien.</p>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+Chart.defaults.color = '#8B949E';
+Chart.defaults.borderColor = '#30363D';
+Chart.defaults.font.family = "'Inter', sans-serif";
+
+let currentChart = null;
+
+async function loadKlienDetail(userId, nama) {
+    const container = document.getElementById('klien-detail-container');
+    container.classList.add('active');
+    document.getElementById('klien-detail-name').textContent = 'Statistik — ' + nama;
+    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Fetch statistik
+    try {
+        const resp = await fetch(`/api/statistik/${userId}/`);
+        const data = await resp.json();
+
+        if (data.status !== 'ok') throw new Error(data.pesan);
+
+        const s = data.statistik;
+        document.getElementById('klien-stats-grid').innerHTML = `
+            <div class="stat-card blue">
+                <span class="stat-label">Total Sesi</span>
+                <span class="stat-value blue">${s.total_sesi}</span>
+            </div>
+            <div class="stat-card green">
+                <span class="stat-label">Total Reps</span>
+                <span class="stat-value green">${s.total_reps_all}</span>
+            </div>
+            <div class="stat-card yellow">
+                <span class="stat-label">Rata-rata Reps</span>
+                <span class="stat-value yellow">${s.avg_reps}</span>
+            </div>
+            <div class="stat-card red">
+                <span class="stat-label">Error Rate</span>
+                <span class="stat-value red">${s.error_rate_pct}%</span>
+            </div>
+        `;
+
+        // Chart
+        renderChart(data.grafik);
+
+        // Riwayat
+        const riwayatResp = await fetch(`/api/riwayat/${userId}/?limit=15`);
+        const riwayatData = await riwayatResp.json();
+        renderRiwayat(riwayatData.data || []);
+
+    } catch (err) {
+        showToast('Gagal memuat data: ' + err.message, 'error');
+    }
+}
+
+function renderChart(grafik) {
+    const labels = grafik.map(g => g.tanggal);
+    const repsData  = grafik.map(g => g.reps);
+    const errorsData = grafik.map(g => g.errors);
+
+    if (currentChart) currentChart.destroy();
+
+    const canvas = document.getElementById('klien-chart');
+    currentChart = new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Reps',
+                    data: repsData,
+                    borderColor: '#2F81F7',
+                    backgroundColor: 'rgba(47,129,247,0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#2F81F7',
+                    pointRadius: 4,
+                },
+                {
+                    label: 'Form Error',
+                    data: errorsData,
+                    borderColor: '#F85149',
+                    backgroundColor: 'rgba(248,81,73,0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#F85149',
+                    pointRadius: 4,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { labels: { usePointStyle: true, padding: 16 } },
+            },
+            scales: {
+                x: { grid: { color: '#21262D' }, ticks: { maxRotation: 0 } },
+                y: { grid: { color: '#21262D' }, beginAtZero: true },
+            },
+        },
+    });
+}
+
+function renderRiwayat(riwayat) {
+    const container = document.getElementById('klien-riwayat-table');
+    if (!riwayat || riwayat.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">—</div><p>Belum ada riwayat sesi.</p></div>';
+        return;
+    }
+    container.innerHTML = `
+        <table>
+            <thead><tr>
+                <th>Gerakan</th><th>Tanggal</th>
+                <th>Reps</th><th>Error</th><th>Error Rate</th>
+            </tr></thead>
+            <tbody>
+                ${riwayat.map(s => `
+                <tr>
+                    <td><span class="badge badge-blue">${s.gerakan}</span></td>
+                    <td class="mono text-small">${s.waktu_mulai}</td>
+                    <td><strong style="color:var(--aksen-hijau)">${s.total_reps}</strong></td>
+                    <td><strong style="color:var(--aksen-merah)">${s.total_form_error}</strong></td>
+                    <td>${s.form_error_rate <= 10
+                        ? `<span class="badge badge-green">${s.form_error_rate}%</span>`
+                        : s.form_error_rate <= 30
+                        ? `<span class="badge badge-yellow">${s.form_error_rate}%</span>`
+                        : `<span class="badge badge-red">${s.form_error_rate}%</span>`
+                    }</td>
+                </tr>`).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function closeDetail() {
+    document.getElementById('klien-detail-container').classList.remove('active');
+}
+</script>
+{% endblock %}

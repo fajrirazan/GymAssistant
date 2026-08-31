@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Klien{% endblock %}
+{% block meta_description %}Dashboard progres latihan Anda di SmartGym AI{% endblock %}
+
+{% block content %}
+<div class="page-header animate-fade-in">
+    <div>
+        <h1 class="page-title">Halo, {% if profil %}{{ profil.nama_lengkap }}{% else %}{{ user.username }}{% endif %}!</h1>
+        <p class="page-subtitle">Pantau progres latihan dan riwayat sesi Anda</p>
+    </div>
+    <a href="{% url 'klien_latihan' %}" class="btn btn-primary">
+        Mulai Latihan AI
+    </a>
+</div>
+
+<div class="page-body animate-fade-in">
+
+    <!-- Stat Cards -->
+    <div class="stats-grid">
+        <div class="stat-card blue">
+            <span class="stat-label">Total Sesi</span>
+            <span class="stat-value blue">{{ total_sesi }}</span>
+            <span class="stat-sub">sesi latihan</span>
+        </div>
+        <div class="stat-card green">
+            <span class="stat-label">Sesi Terakhir</span>
+            <span class="stat-value green" style="font-size:18px;">
+                {% if riwayat %}{{ riwayat.0.waktu_mulai|date:"d M" }}{% else %}—{% endif %}
+            </span>
+            <span class="stat-sub">{% if riwayat %}{{ riwayat.0.waktu_mulai|date:"H:i" }}{% else %}Belum ada sesi{% endif %}</span>
+        </div>
+        <div class="stat-card yellow">
+            <span class="stat-label">Reps Terakhir</span>
+            <span class="stat-value yellow">{% if riwayat %}{{ riwayat.0.total_reps }}{% else %}—{% endif %}</span>
+            <span class="stat-sub">repetisi</span>
+        </div>
+        <div class="stat-card red">
+            <span class="stat-label">Error Terakhir</span>
+            <span class="stat-value red">{% if riwayat %}{{ riwayat.0.total_form_error }}{% else %}—{% endif %}</span>
+            <span class="stat-sub">form error</span>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <!-- Riwayat Latihan -->
+        <div class="card" style="grid-column: 1 / -1;">
+            <div class="card-title">
+                Riwayat 10 Sesi Terakhir
+            </div>
+            {% if riwayat %}
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Gerakan</th>
+                            <th>Tanggal & Waktu</th>
+                            <th>Reps</th>
+                            <th>Form Error</th>
+                            <th>Error Rate</th>
+                            <th>Catatan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sesi in riwayat %}
+                        <tr>
+                            <td>
+                                <span class="badge badge-blue">{{ sesi.gerakan.nama_gerakan }}</span>
+                            </td>
+                            <td class="mono text-small">{{ sesi.waktu_mulai|date:"d M Y H:i" }}</td>
+                            <td>
+                                <strong style="color:var(--aksen-hijau);">{{ sesi.total_reps }}</strong>
+                            </td>
+                            <td>
+                                <strong style="color:var(--aksen-merah);">{{ sesi.total_form_error }}</strong>
+                            </td>
+                            <td>
+                                {% if sesi.form_error_rate <= 10 %}
+                                <span class="badge badge-green">{{ sesi.form_error_rate }}%</span>
+                                {% elif sesi.form_error_rate <= 30 %}
+                                <span class="badge badge-yellow">{{ sesi.form_error_rate }}%</span>
+                                {% else %}
+                                <span class="badge badge-red">{{ sesi.form_error_rate }}%</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-small text-muted">{{ sesi.catatan|default:"—" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">—</div>
+                <p>Belum ada riwayat sesi latihan.</p>
+                <a href="{% url 'klien_latihan' %}" class="btn btn-primary" style="margin-top:16px;">
+                    Mulai Latihan Pertama →
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Info PT -->
+        {% if pt %}
+        <div class="card">
+            <div class="card-title">Personal Trainer Anda</div>
+            <div style="display:flex;align-items:center;gap:14px;padding:16px;background:var(--bg-utama);border-radius:var(--radius-md);">
+                <div class="user-avatar" style="width:48px;height:48px;font-size:18px;">{{ pt.nama_lengkap|first|upper }}</div>
+                <div>
+                    <div style="font-weight:700;font-size:15px;">{{ pt.nama_lengkap }}</div>
+                    <div class="text-small text-muted">{{ pt.spesialisasi|default:"Personal Trainer" }}</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Info Profil -->
+        {% if profil %}
+        <div class="card">
+            <div class="card-title">Profil Saya</div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                <div class="flex-between">
+                    <span class="text-muted text-small">Username</span>
+                    <span class="mono">{{ user.username }}</span>
+                </div>
+                <div class="flex-between">
+                    <span class="text-muted text-small">Nama Lengkap</span>
+                    <span>{{ profil.nama_lengkap }}</span>
+                </div>
+                {% if profil.berat_badan %}
+                <div class="flex-between">
+                    <span class="text-muted text-small">Berat Badan</span>
+                    <span>{{ profil.berat_badan }} kg</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

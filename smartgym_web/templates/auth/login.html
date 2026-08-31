@@ -1,0 +1,88 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Login ke SmartGym AI — Virtual Gym Assistant dengan AI Pose Estimation">
+    <title>Login — SmartGym AI</title>
+    <link rel="icon" href="{% static 'img/logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+</head>
+<body>
+<div class="login-page">
+    <div class="login-card animate-fade-in">
+        <div class="login-logo">
+            <div class="logo-circle"><img src="{% static 'img/logo.png' %}" alt="SmartGym AI" style="width:74px;height:74px;object-fit:contain;"></div>
+            <h1>SmartGym AI</h1>
+            <p>Virtual Gym Assistant — Pose Detection Real-Time</p>
+        </div>
+
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{% if message.tags %}{{ message.tags }}{% else %}danger{% endif %}" style="margin-bottom:16px;">
+            <span style="font-size:13px;">!</span> {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <form method="POST" id="login-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label" for="id_username">Username</label>
+                <input
+                    type="text"
+                    id="id_username"
+                    name="username"
+                    class="form-control"
+                    placeholder="Masukkan username..."
+                    autocomplete="username"
+                    required
+                    autofocus
+                >
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="id_password">Password</label>
+                <input
+                    type="password"
+                    id="id_password"
+                    name="password"
+                    class="form-control"
+                    placeholder="Masukkan password..."
+                    autocomplete="current-password"
+                    required
+                >
+            </div>
+
+            <button type="submit" class="btn btn-primary w-full btn-lg" id="btn-login" style="margin-top:8px;">
+                <span id="btn-text">Masuk ke Sistem</span>
+                <span id="btn-loading" class="loading-dots" style="display:none;">
+                    <span></span><span></span><span></span>
+                </span>
+            </button>
+        </form>
+
+        <div style="margin-top:24px;text-align:center;">
+            <p class="text-small text-muted">
+                Sistem dilindungi dengan enkripsi. Hubungi administrator untuk akun baru.
+            </p>
+        </div>
+
+        <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);text-align:center;">
+            <p class="text-small" style="color:var(--teks-muted);">
+                Powered by <strong style="color:var(--aksen-biru);">MediaPipe.js</strong> &
+                <strong style="color:var(--aksen-ungu);">Django</strong>
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('login-form').addEventListener('submit', function() {
+    document.getElementById('btn-text').style.display = 'none';
+    document.getElementById('btn-loading').style.display = 'inline-flex';
+    document.getElementById('btn-login').disabled = true;
+});
+</script>
+</body>
+</html>

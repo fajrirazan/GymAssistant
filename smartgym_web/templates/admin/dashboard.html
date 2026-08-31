@@ -1,0 +1,375 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Panel Administrator{% endblock %}
+
+{% block content %}
+<div class="page-header animate-fade-in">
+    <div>
+        <h1 class="page-title">Panel Administrator</h1>
+        <p class="page-subtitle">Manajemen pengguna, Personal Trainer, Klien, dan parameter biomekanika</p>
+    </div>
+    <div style="display:flex;gap:10px;">
+        <div class="stat-card" style="padding:12px 20px;margin:0;">
+            <span class="stat-label">Total Users</span>
+            <span class="stat-value" style="font-size:22px;">{{ total_users }}</span>
+        </div>
+        <div class="stat-card" style="padding:12px 20px;margin:0;">
+            <span class="stat-label">Total Sesi</span>
+            <span class="stat-value blue" style="font-size:22px;">{{ total_sesi }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="page-body animate-fade-in">
+
+    <!-- TABS -->
+    <div id="admin-tabs">
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="tab-users">Users</button>
+            <button class="tab-btn" data-tab="tab-pt">Personal Trainer</button>
+            <button class="tab-btn" data-tab="tab-klien">Klien</button>
+            <button class="tab-btn" data-tab="tab-gerakan">Master Gerakan</button>
+        </div>
+
+        <!-- TAB: USERS -->
+        <div id="tab-users" class="tab-panel active">
+            <div class="flex-between" style="margin-bottom:16px;">
+                <h3 class="card-title" style="margin:0;">Semua Pengguna</h3>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>ID</th><th>Username</th><th>Role</th><th>Status</th><th>Aksi</th></tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        {% for u in all_users %}
+                        <tr id="user-row-{{ u.pk }}">
+                            <td class="mono text-small">{{ u.pk }}</td>
+                            <td><strong>{{ u.username }}</strong></td>
+                            <td>
+                                {% if u.role == 'admin' %}
+                                <span class="badge badge-yellow">Admin</span>
+                                {% elif u.role == 'pt' %}
+                                <span class="badge badge-blue">PT</span>
+                                {% else %}
+                                <span class="badge badge-green">Klien</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if u.is_active %}
+                                <span class="badge badge-green">● Aktif</span>
+                                {% else %}
+                                <span class="badge badge-gray">○ Nonaktif</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if u.role != 'admin' %}
+                                <div style="display:flex;gap:6px;">
+                                    <button class="btn btn-ghost btn-sm"
+                                        data-userid="{{ u.pk }}"
+                                        onclick="toggleUser(this.dataset.userid, this)">
+                                        {% if u.is_active %}Nonaktifkan{% else %}Aktifkan{% endif %}
+                                    </button>
+                                    <button class="btn btn-danger btn-sm"
+                                        data-userid="{{ u.pk }}"
+                                        data-username="{{ u.username }}"
+                                        onclick="hapusUser(this.dataset.userid, this.dataset.username)">
+                                        Hapus
+                                    </button>
+                                </div>
+                                {% else %}
+                                <span class="text-small text-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB: PT -->
+        <div id="tab-pt" class="tab-panel">
+            <div class="flex-between" style="margin-bottom:16px;">
+                <h3 class="card-title" style="margin:0;">Daftar Personal Trainer</h3>
+                <button class="btn btn-primary btn-sm" onclick="openModal('modal-tambah-pt')">+ Tambah PT</button>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>Nama</th><th>Username</th><th>Spesialisasi</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for pt in all_pt %}
+                        <tr>
+                            <td><strong>{{ pt.nama_lengkap }}</strong></td>
+                            <td class="mono text-small">{{ pt.user.username }}</td>
+                            <td>{{ pt.spesialisasi|default:"—" }}</td>
+                            <td>
+                                {% if pt.user.is_active %}
+                                <span class="badge badge-green">● Aktif</span>
+                                {% else %}
+                                <span class="badge badge-gray">○ Nonaktif</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB: KLIEN -->
+        <div id="tab-klien" class="tab-panel">
+            <div class="flex-between" style="margin-bottom:16px;">
+                <h3 class="card-title" style="margin:0;">Daftar Klien</h3>
+                <button class="btn btn-primary btn-sm" onclick="openModal('modal-tambah-klien')">+ Tambah Klien</button>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>Nama</th><th>Username</th><th>Berat</th><th>PT</th><th>Status</th><th>Assign PT</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for klien in all_klien %}
+                        <tr>
+                            <td><strong>{{ klien.nama_lengkap }}</strong></td>
+                            <td class="mono text-small">{{ klien.user.username }}</td>
+                            <td>{{ klien.berat_badan|default:"—" }}{% if klien.berat_badan %} kg{% endif %}</td>
+                            <td>{{ klien.pt.nama_lengkap|default:"—" }}</td>
+                            <td>
+                                {% if klien.user.is_active %}
+                                <span class="badge badge-green">● Aktif</span>
+                                {% else %}
+                                <span class="badge badge-gray">○ Nonaktif</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-ghost btn-sm"
+                                    data-klienid="{{ klien.pk }}"
+                                    data-kliennama="{{ klien.nama_lengkap }}"
+                                    onclick="openAssignModal(this.dataset.klienid, this.dataset.kliennama)">
+                                    Assign
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB: GERAKAN -->
+        <div id="tab-gerakan" class="tab-panel">
+            <h3 class="card-title" style="margin-bottom:16px;">Parameter Biomekanika</h3>
+            {% for gerakan in gerakan_list %}
+            <div class="card" style="margin-bottom:16px;">
+                <div class="flex-between" style="margin-bottom:16px;">
+                    <div>
+                        <div style="font-size:16px;font-weight:700;">{{ gerakan.nama_gerakan }}</div>
+                        <div class="text-small text-muted">{{ gerakan.deskripsi|default:"—" }}</div>
+                    </div>
+                    <button class="btn btn-ghost btn-sm js-update-gerakan"
+                        data-pk="{{ gerakan.pk }}">
+                        Simpan
+                    </button>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label">Sudut Maksimal (°)</label>
+                        <input type="number" class="form-control" id="sudut-{{ gerakan.pk }}"
+                            value="{{ gerakan.sudut_maksimal }}" min="1" max="180" step="0.5">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label class="form-label">Wajib Scapular Plane</label>
+                        <select class="form-control" id="scapular-{{ gerakan.pk }}">
+                            <option value="true" {% if gerakan.wajib_scapular_plane %}selected{% endif %}>Ya (Aktif)</option>
+                            <option value="false" {% if not gerakan.wajib_scapular_plane %}selected{% endif %}>Tidak (Nonaktif)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+    </div><!-- /#admin-tabs -->
+</div>
+
+<!-- MODAL: Tambah PT -->
+<div class="modal-overlay" id="modal-tambah-pt">
+    <div class="modal-box">
+        <div class="modal-title">Tambah Personal Trainer</div>
+        <div class="form-group"><label class="form-label">Username</label>
+            <input type="text" class="form-control" id="pt-username" placeholder="contoh: trainer_budi">
+        </div>
+        <div class="form-group"><label class="form-label">Password</label>
+            <input type="password" class="form-control" id="pt-password" placeholder="Minimal 8 karakter">
+        </div>
+        <div class="form-group"><label class="form-label">Nama Lengkap</label>
+            <input type="text" class="form-control" id="pt-nama" placeholder="Budi Santoso, S.Or.">
+        </div>
+        <div class="form-group"><label class="form-label">Spesialisasi</label>
+            <input type="text" class="form-control" id="pt-spesialisasi" placeholder="Strength & Conditioning">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="closeModal('modal-tambah-pt')">Batal</button>
+            <button class="btn btn-primary" onclick="tambahPT()">Simpan PT</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Tambah Klien -->
+<div class="modal-overlay" id="modal-tambah-klien">
+    <div class="modal-box">
+        <div class="modal-title">Tambah Klien Baru</div>
+        <div class="grid-2" style="gap:12px;margin-bottom:12px;">
+            <div class="form-group" style="margin:0;"><label class="form-label">Username</label>
+                <input type="text" class="form-control" id="klien-username" placeholder="username">
+            </div>
+            <div class="form-group" style="margin:0;"><label class="form-label">Password</label>
+                <input type="password" class="form-control" id="klien-password" placeholder="password">
+            </div>
+        </div>
+        <div class="form-group"><label class="form-label">Nama Lengkap</label>
+            <input type="text" class="form-control" id="klien-nama" placeholder="Ahmad Fariz">
+        </div>
+        <div class="grid-2" style="gap:12px;margin-bottom:12px;">
+            <div class="form-group" style="margin:0;"><label class="form-label">Berat Badan (kg)</label>
+                <input type="number" class="form-control" id="klien-berat" placeholder="70" step="0.1">
+            </div>
+            <div class="form-group" style="margin:0;"><label class="form-label">Assign ke PT</label>
+                <select class="form-control" id="klien-pt">
+                    <option value="">— Pilih PT —</option>
+                    {% for pt in all_pt %}
+                    <option value="{{ pt.pk }}">{{ pt.nama_lengkap }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="closeModal('modal-tambah-klien')">Batal</button>
+            <button class="btn btn-primary" onclick="tambahKlien()">Simpan Klien</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Assign PT -->
+<div class="modal-overlay" id="modal-assign-pt">
+    <div class="modal-box">
+        <div class="modal-title">Assign PT ke Klien</div>
+        <p id="assign-klien-name" class="text-muted" style="margin-bottom:16px;"></p>
+        <input type="hidden" id="assign-klien-id">
+        <div class="form-group">
+            <label class="form-label">Pilih Personal Trainer</label>
+            <select class="form-control" id="assign-pt-id">
+                {% for pt in all_pt %}
+                <option value="{{ pt.pk }}">{{ pt.nama_lengkap }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-ghost" onclick="closeModal('modal-assign-pt')">Batal</button>
+            <button class="btn btn-primary" onclick="assignPT()">Simpan Assign</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Init tabs
+document.addEventListener('DOMContentLoaded', () => initTabs('#admin-tabs'));
+
+function openModal(id)  { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) closeModal(m.id); });
+});
+
+const CSRF = '{{ csrf_token }}';
+
+async function apiPost(url, body) {
+    const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify(body),
+    });
+    return resp.json();
+}
+
+async function tambahPT() {
+    const data = await apiPost('/admin-panel/pt/tambah/', {
+        username: document.getElementById('pt-username').value,
+        password: document.getElementById('pt-password').value,
+        nama: document.getElementById('pt-nama').value,
+        spesialisasi: document.getElementById('pt-spesialisasi').value,
+    });
+    showToast(data.pesan, data.status === 'ok' ? 'success' : 'error');
+    if (data.status === 'ok') { closeModal('modal-tambah-pt'); setTimeout(() => location.reload(), 1200); }
+}
+
+async function tambahKlien() {
+    const data = await apiPost('/admin-panel/klien/tambah/', {
+        username: document.getElementById('klien-username').value,
+        password: document.getElementById('klien-password').value,
+        nama: document.getElementById('klien-nama').value,
+        berat_badan: parseFloat(document.getElementById('klien-berat').value) || null,
+        id_pt: parseInt(document.getElementById('klien-pt').value) || null,
+    });
+    showToast(data.pesan, data.status === 'ok' ? 'success' : 'error');
+    if (data.status === 'ok') { closeModal('modal-tambah-klien'); setTimeout(() => location.reload(), 1200); }
+}
+
+async function hapusUser(idUser, username) {
+    if (!confirm(`Hapus user "${username}"? Semua data terkait akan ikut terhapus.`)) return;
+    const resp = await fetch(`/admin-panel/users/${idUser}/hapus/`, {
+        method: 'DELETE',
+        headers: { 'X-CSRFToken': CSRF },
+    });
+    const data = await resp.json();
+    showToast(data.pesan, data.status === 'ok' ? 'success' : 'error');
+    if (data.status === 'ok') document.getElementById(`user-row-${idUser}`)?.remove();
+}
+
+async function toggleUser(idUser, btn) {
+    const resp = await fetch(`/admin-panel/users/${idUser}/toggle/`, {
+        method: 'PATCH',
+        headers: { 'X-CSRFToken': CSRF },
+    });
+    const data = await resp.json();
+    showToast(data.pesan, data.status === 'ok' ? 'success' : 'error');
+    if (data.status === 'ok') {
+        btn.textContent = data.is_active ? 'Nonaktifkan' : 'Aktifkan';
+    }
+}
+
+function openAssignModal(klienId, namaKlien) {
+    document.getElementById('assign-klien-id').value = klienId;
+    document.getElementById('assign-klien-name').textContent = `Klien: ${namaKlien}`;
+    openModal('modal-assign-pt');
+}
+
+async function assignPT() {
+    const data = await apiPost('/admin-panel/assign-pt/', {
+        id_klien: parseInt(document.getElementById('assign-klien-id').value),
+        id_pt: parseInt(document.getElementById('assign-pt-id').value),
+    });
+    showToast(data.pesan, data.status === 'ok' ? 'success' : 'error');
+    if (data.status === 'ok') { closeModal('modal-assign-pt'); setTimeout(() => location.reload(), 1200); }
+}
+
+async function updateGerakan(idGerakan) {
+    const data = await apiPost(`/admin-panel/gerakan/${idGerakan}/update/`, {
+        sudut_maksimal: parseFloat(document.getElementById(`sudut-${idGerakan}`).value),
+        wajib_scapular_plane: document.getElementById(`scapular-${idGerakan}`).value === 'true',
+    });
+    showToast(data.pesan, data.status === 'ok' ? 'success' : 'error');
+}
+
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.js-update-gerakan');
+    if (btn) updateGerakan(btn.dataset.pk);
+});
+</script>
+{% endblock %}

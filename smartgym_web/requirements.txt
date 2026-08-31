@@ -1,0 +1,21 @@
+# SmartGym AI — Requirements (Production-ready untuk Railway)
+
+# ── Core Django ──────────────────────────────────────────────────
+Django>=5.2
+djangorestframework>=3.17
+django-cors-headers>=4.9
+
+# ── Database ─────────────────────────────────────────────────────
+mysqlclient>=2.1          # Untuk Railway MySQL
+
+# ── Production Server ─────────────────────────────────────────────
+gunicorn>=21.2             # WSGI server untuk production (wajib di Railway)
+
+# ── Static Files ──────────────────────────────────────────────────
+whitenoise>=6.6            # Serve static files tanpa Nginx
+
+# ── Auth & Security ───────────────────────────────────────────────
+bcrypt>=4.0
+
+# ── Utilities ─────────────────────────────────────────────────────
+python-dotenv>=1.0

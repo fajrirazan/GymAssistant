@@ -1,0 +1,36 @@
+# SmartGym AI — .gitignore
+
+# Environment & Secrets
+.env
+*.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Django
+db_smartgym.sqlite3
+*.sqlite3
+staticfiles/
+media/
+
+# Virtual environment
+venv/
+env/
+.venv/
+aiCounter/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backup
+desktop_backup_*.zip
